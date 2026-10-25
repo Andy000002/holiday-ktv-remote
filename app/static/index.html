@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>KTV點歌</title>
+<style>
+  :root {
+    --bg: #121018;
+    --card: #1e1a28;
+    --accent: #ff4d8d;
+    --accent2: #6c5ce7;
+    --text: #f2f0f5;
+    --sub: #9b94ad;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overscroll-behavior-y: contain;
+  }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ---------- 登入畫面 ---------- */
+  #loginScreen.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+    padding: 20px;
+  }
+  #loginScreen h1 {
+    font-size: 22px;
+    margin: 0 0 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  #loginScreen p { color: var(--sub); margin-bottom: 24px; }
+  #loginScreen .disclaimer {
+    margin: 40px 0 0;
+    max-width: 320px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--sub);
+    opacity: 0.7;
+  }
+  #codeInput {
+    font-size: 32px;
+    letter-spacing: 8px;
+    text-align: center;
+    width: 180px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 2px solid var(--accent2);
+    background: var(--card);
+    color: var(--text);
+    text-transform: uppercase;
+  }
+  button.primary {
+    margin-top: 20px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    color: white;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 36px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .history {
+    margin-top: 28px;
+    width: 100%;
+    max-width: 280px;
+  }
+  .history .label { font-size: 12px; color: var(--sub); margin-bottom: 8px; }
+  .history-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .history-chip {
+    background: var(--card);
+    border: 1px solid #332e42;
+    color: var(--text);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+
+  /* ---------- 登入後的 App 外殼 ---------- */
+  #appShell { min-height: 100vh; }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid #241f30;
+  }
+  .topbar-row {
+    padding: 14px 20px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar-row h1 {
+    font-size: 18px;
+    margin: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  #switchRoom {
+    background: none;
+    border: 1px solid var(--sub);
+    color: var(--sub);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  #nowPlaying {
+    padding: 0 20px 10px;
+    font-size: 13px;
+    color: var(--sub);
+    min-height: 18px;
+  }
+  .tabbar {
+    display: flex;
+    padding: 0 12px;
+  }
+  .tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--sub);
+    padding: 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  main { padding: 16px 20px 40px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* 首頁 */
+  .home-now {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .home-now .label { font-size: 12px; color: var(--sub); }
+  .home-now .singer { font-size: 22px; font-weight: 700; margin-top: 6px; }
+  .home-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .home-btn {
+    background: var(--card);
+    border: 1px solid #332e42;
+    border-radius: 16px;
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .home-btn .icon { font-size: 28px; display: block; margin-bottom: 8px; }
+
+  .searchBar, .chartBar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  select, input[type=text] {
+    background: var(--card);
+    border: 1px solid #332e42;
+    color: var(--text);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+  input[type=text] { flex: 1; }
+  .searchBar button {
+    background: var(--accent2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+  }
+  .chartBar select { flex: 1; }
+  .chartBar button {
+    background: #4b4458;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    flex: 0 0 72px;
+  }
+  .msg {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #2a2435;
+    color: var(--sub);
+    font-size: 14px;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .msg.show { display: block; }
+  .msg.error { color: #ff7a9c; background: #2e1a24; }
+  .song-card {
+    display: flex;
+    gap: 12px;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .song-card img {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #332e42;
+  }
+  .song-meta { flex: 1; min-width: 0; }
+  .song-meta .name { font-size: 15px; font-weight: 600; }
+  .song-meta .singer { font-size: 13px; color: var(--sub); }
+  .song-meta .id { font-size: 11px; color: var(--sub); }
+  .song-actions { display: flex; flex-direction: column; gap: 6px; }
+  .song-actions button {
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: white;
+    white-space: nowrap;
+  }
+  .btn-order { background: var(--accent); }
+  .btn-quick { background: #ff9f43; }
+  .btn-book { background: #4b4458; }
+  .sentinel {
+    height: 1px;
+  }
+  .loading-more {
+    text-align: center;
+    font-size: 12px;
+    color: var(--sub);
+    padding: 10px 0;
+    display: none;
+  }
+  .loading-more.show { display: block; }
+  .searching { opacity: 0.6; }
+
+  .panel {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .panel h3 { margin: 0 0 12px; font-size: 14px; color: var(--sub); }
+  .channel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+  .channel-row + .channel-row { border-top: 1px solid #2a2435; }
+  .channel-row .cname { font-size: 15px; font-weight: 600; width: 64px; }
+  .channel-row .steps { display: flex; align-items: center; gap: 10px; }
+  .step-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #332e42;
+    background: #241f30;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .reset-btn {
+    border: none;
+    background: none;
+    color: var(--sub);
+    font-size: 11px;
+    width: 44px;
+  }
+  .transport-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .remote-btn {
+    background: #241f30;
+    border: 1px solid #332e42;
+    border-radius: 14px;
+    padding: 16px 4px;
+    color: var(--text);
+    font-size: 13px;
+    text-align: center;
+  }
+  .remote-btn .icon { font-size: 22px; display: block; margin-bottom: 6px; }
+  .remote-btn:active { background: var(--accent2); }
+  .vocal-btn {
+    width: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .remote-btn:disabled, .vocal-btn:disabled, .step-btn:disabled { opacity: 0.4; }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    width: 260px;
+    text-align: center;
+  }
+  .modal-box h3 { margin: 0 0 14px; }
+  .modal-box input {
+    width: 100%;
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .modal-actions button { flex: 1; border: none; border-radius: 10px; padding: 10px; font-size: 14px; }
+  .btn-primary { background: var(--accent2); color: white; }
+  .btn-secondary { background: #332e42; color: var(--text); }
+
+  .admin-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 0;
+    font-size: 13px;
+  }
+  .admin-row + .admin-row { border-top: 1px solid #2a2435; }
+  .admin-row .info { flex: 1; min-width: 0; }
+  .admin-row .info .line1 { font-weight: 600; }
+  .admin-row .info .line2 { color: var(--sub); font-size: 11px; word-break: break-all; }
+  .admin-row button {
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: white;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn-ban { background: var(--accent); }
+  .btn-unban { background: #4b4458; }
+  .admin-log { max-height: 320px; overflow-y: auto; }
+  .empty-hint { color: var(--sub); font-size: 13px; text-align: center; padding: 10px 0; }
+</style>
+</head>
+<body>
+
+<section id="loginScreen" class="screen active">
+  <h1>KTV點歌</h1>
+  <p>輸入包廂內顯示的 4 位驗證碼</p>
+  <input id="codeInput" maxlength="4" autocomplete="off" placeholder="----">
+  <button class="primary" id="loginBtn">登入包廂</button>
+  <div class="msg" id="loginMsg"></div>
+  <div class="history" id="historyBox" style="display:none;">
+    <div class="label">最近用過的房號，點一下直接登入</div>
+    <div class="history-chips" id="historyChips"></div>
+  </div>
+  <p class="disclaimer">非官方工具，與好樂迪無關，僅供個人學習交流使用。<br>請只在自己使用中的包廂操作。</p>
+</section>
+
+<div id="appShell" class="screen">
+  <header class="topbar">
+    <div class="topbar-row">
+      <h1 id="appTitle">KTV點歌</h1>
+      <button id="switchRoom">切換房間</button>
+    </div>
+    <div id="nowPlaying"></div>
+    <nav class="tabbar">
+      <button class="tab active" data-page="homePage">首頁</button>
+      <button class="tab" data-page="searchPage">搜尋</button>
+      <button class="tab" data-page="chartPage">排行榜</button>
+      <button class="tab" data-page="remotePage">遙控器</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="homePage" class="page active">
+      <div class="home-now">
+        <div class="label">目前歌手</div>
+        <div class="singer" id="homeSinger">查詢中...</div>
+      </div>
+      <div class="home-grid">
+        <div class="home-btn" data-goto="searchPage">
+          <span class="icon">🔍</span>搜尋歌曲
+        </div>
+        <div class="home-btn" data-goto="chartPage">
+          <span class="icon">📈</span>排行榜／新歌
+        </div>
+      </div>
+    </section>
+
+    <section id="searchPage" class="page">
+      <div class="searchBar">
+        <input type="text" id="wordInput" placeholder="輸入歌名或歌手，自動搜尋">
+        <button id="searchBtn">搜尋</button>
+      </div>
+      <div class="msg" id="searchMsg"></div>
+      <div id="searchList"></div>
+      <div class="loading-more" id="searchLoadingMore">載入更多...</div>
+      <div class="sentinel" id="searchSentinel"></div>
+    </section>
+
+    <section id="chartPage" class="page">
+      <div class="chartBar">
+        <select id="chartType">
+          <option value="N">新進歌曲</option>
+          <option value="T">新歌排行榜</option>
+          <option value="O">點播排行榜</option>
+        </select>
+        <select id="chartLan"></select>
+        <button id="chartBtn">瀏覽</button>
+      </div>
+      <div class="msg" id="chartMsg"></div>
+      <div id="chartList"></div>
+      <div class="loading-more" id="chartLoadingMore">載入更多...</div>
+      <div class="sentinel" id="chartSentinel"></div>
+    </section>
+
+    <section id="remotePage" class="page">
+      <div class="msg" id="remoteMsg"></div>
+
+      <div class="panel">
+        <h3>音量控制</h3>
+        <div id="mixerRows"></div>
+      </div>
+
+      <div class="panel">
+        <h3>播放控制</h3>
+        <div class="transport-grid">
+          <button class="remote-btn" data-act="repeat"><span class="icon">↺</span>重唱</button>
+          <button class="remote-btn" data-act="pause"><span class="icon">⏯</span>播放／暫停</button>
+          <button class="remote-btn" data-act="mute"><span class="icon">🔇</span>靜音</button>
+          <button class="remote-btn" data-act="cut"><span class="icon">⏭</span>切歌</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>演唱模式</h3>
+        <button class="vocal-btn" data-act="vocal">原唱 / 伴唱</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="adminLoginModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>管理員登入</h3>
+    <input id="adminPassword" type="password" inputmode="numeric" placeholder="密碼" autocomplete="off">
+    <div class="msg" id="adminLoginMsg"></div>
+    <div class="modal-actions">
+      <button id="adminLoginCancel" class="btn-secondary">取消</button>
+      <button id="adminLoginSubmit" class="btn-primary">登入</button>
+    </div>
+  </div>
+</div>
+
+<div id="adminPanel" class="screen">
+  <div class="topbar-row" style="position:static;">
+    <h1>管理後台</h1>
+    <button id="adminExit">離開後台</button>
+  </div>
+  <main>
+    <div class="panel">
+      <h3>目前登入裝置</h3>
+      <div id="adminSessions"></div>
+    </div>
+    <div class="panel">
+      <h3>已封鎖的裝置</h3>
+      <div id="adminBanned"></div>
+    </div>
+    <div class="panel">
+      <h3>操作紀錄（最新 200 筆）</h3>
+      <div id="adminActions" class="admin-log"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const PAGE_SIZE = 25;
+const HISTORY_KEY = "ktv_room_history";
+
+function showMsg(el, text, isError) {
+  el.textContent = text;
+  el.className = "msg show" + (isError ? " error" : "");
+}
+function hideMsg(el) {
+  el.className = "msg";
+}
+
+function debounce(fn, delay) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+/* ---------- 裝置指紋：同一 Wi-Fi 底下不同手機也能分辨 ---------- */
+const DEVICE_FP_KEY = "ktv_device_fp";
+
+function computeFingerprint() {
+  const parts = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + "x" + screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || "",
+    navigator.maxTouchPoints || "",
+    navigator.platform || "",
+  ];
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.textBaseline = "top";
+    ctx.font = "14px Arial";
+    ctx.fillText("holidaysong-fp", 2, 2);
+    parts.push(canvas.toDataURL());
+  } catch (e) {
+    // 有些瀏覽器隱私模式會擋 canvas，擋了就算了，其他特徵還是有分辨力
+  }
+  const raw = parts.join("|");
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = (hash << 5) - hash + raw.charCodeAt(i);
+    hash |= 0;
+  }
+  return "fp_" + Math.abs(hash).toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function getDeviceFp() {
+  let fp = localStorage.getItem(DEVICE_FP_KEY);
+  if (!fp) {
+    fp = computeFingerprint();
+    localStorage.setItem(DEVICE_FP_KEY, fp);
+  }
+  return fp;
+}
+
+function getConnType() {
+  // iOS Safari 完全不支援這個 API，拿不到的就回空字串，後台會顯示「未知」
+  const c = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
+  return c ? (c.type || c.effectiveType || "") : "";
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(path, {
+    method: options.method || "GET",
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      "X-Device-Fp": getDeviceFp(),
+      "X-Device-Screen": screen.width + "x" + screen.height,
+      "X-Device-Lang": navigator.language || "",
+      "X-Device-Conn": getConnType(),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    signal: options.signal,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || data.msg || "發生錯誤");
+  return data;
+}
+
+/* ---------- 房號歷史紀錄（存在裝置的 localStorage） ---------- */
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch { return []; }
+}
+function saveHistoryEntry(code) {
+  const list = loadHistory().filter((c) => c !== code);
+  list.unshift(code);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 6)));
+}
+function renderHistory() {
+  const list = loadHistory();
+  const box = $("historyBox");
+  if (list.length === 0) { box.style.display = "none"; return; }
+  box.style.display = "block";
+  $("historyChips").innerHTML = list
+    .map((code) => `<button class="history-chip" data-code="${code}">${code}</button>`)
+    .join("");
+  $("historyChips").querySelectorAll(".history-chip").forEach((btn) => {
+    btn.addEventListener("click", () => attemptLogin(btn.dataset.code));
+  });
+}
+
+/* ---------- 畫面切換 ---------- */
+function showApp() {
+  $("loginScreen").classList.remove("active");
+  $("appShell").classList.add("active");
+}
+function showLogin() {
+  $("appShell").classList.remove("active");
+  $("loginScreen").classList.add("active");
+  $("codeInput").value = "";
+  renderHistory();
+}
+function showPage(pageId) {
+  document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+  $(pageId).classList.add("active");
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.classList.toggle("active", t.dataset.page === pageId);
+  });
+}
+document.querySelectorAll(".tab").forEach((btn) => {
+  btn.addEventListener("click", () => showPage(btn.dataset.page));
+});
+document.querySelectorAll("[data-goto]").forEach((btn) => {
+  btn.addEventListener("click", () => showPage(btn.dataset.goto));
+});
+
+/* ---------- 登入 ---------- */
+async function attemptLogin(code) {
+  hideMsg($("loginMsg"));
+  try {
+    await api("api/login", { method: "POST", body: { code } });
+    saveHistoryEntry(code);
+    showApp();
+    pollNow();
+    pollRoomStatus();
+  } catch (e) {
+    showMsg($("loginMsg"), e.message, true);
+  }
+}
+$("loginBtn").addEventListener("click", () => {
+  const code = $("codeInput").value.trim().toUpperCase();
+  if (code.length !== 4) { showMsg($("loginMsg"), "請輸入 4 位包廂驗證碼", true); return; }
+  attemptLogin(code);
+});
+$("codeInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") $("loginBtn").click();
+});
+
+$("switchRoom").addEventListener("click", async () => {
+  await api("api/logout", { method: "POST" }).catch(() => {});
+  showLogin();
+});
+
+/* ---------- 隱藏後台：點標題 5 下 + 密碼 ---------- */
+let titleTapCount = 0;
+let titleTapTimer = null;
+document.querySelectorAll("#appTitle, #loginScreen h1").forEach((el) => {
+  el.addEventListener("click", () => {
+    titleTapCount += 1;
+    clearTimeout(titleTapTimer);
+    titleTapTimer = setTimeout(() => { titleTapCount = 0; }, 3000);
+    if (titleTapCount >= 5) {
+      titleTapCount = 0;
+      openAdminLoginModal();
+    }
+  });
+});
+
+function openAdminLoginModal() {
+  $("adminPassword").value = "";
+  hideMsg($("adminLoginMsg"));
+  $("adminLoginModal").classList.add("show");
+  setTimeout(() => $("adminPassword").focus(), 50);
+}
+function closeAdminLoginModal() {
+  $("adminLoginModal").classList.remove("show");
+}
+$("adminLoginCancel").addEventListener("click", closeAdminLoginModal);
+$("adminPassword").addEventListener("keydown", (e) => { if (e.key === "Enter") $("adminLoginSubmit").click(); });
+$("adminLoginSubmit").addEventListener("click", async () => {
+  try {
+    await api("api/admin/login", { method: "POST", body: { password: $("adminPassword").value } });
+    closeAdminLoginModal();
+    enterAdminPanel();
+  } catch (e) {
+    showMsg($("adminLoginMsg"), e.message, true);
+  }
+});
+
+function formatTs(ts) {
+  if (!ts) return "—";
+  return new Date(ts * 1000).toLocaleString("zh-TW", { hour12: false });
+}
+function shortFp(fp) {
+  if (!fp) return "(無指紋)";
+  return fp.length > 16 ? fp.slice(0, 16) + "…" : fp;
+}
+
+async function enterAdminPanel() {
+  $("loginScreen").classList.remove("active");
+  $("appShell").classList.remove("active");
+  $("adminPanel").classList.add("active");
+  await refreshAdminData();
+}
+
+$("adminExit").addEventListener("click", async () => {
+  $("adminPanel").classList.remove("active");
+  checkSession();
+});
+
+async function banDevice(fp) {
+  if (!confirm(`確定要封鎖這個裝置嗎？\n${fp}`)) return;
+  try {
+    await api("api/admin/ban", { method: "POST", body: { fp } });
+    refreshAdminData();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+async function unbanDevice(fp) {
+  try {
+    await api("api/admin/unban", { method: "POST", body: { fp } });
+    refreshAdminData();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function refreshAdminData() {
+  try {
+    const sData = await api("api/admin/sessions");
+    const sessList = $("adminSessions");
+    sessList.innerHTML = sData.sessions.length === 0
+      ? `<div class="empty-hint">目前沒有裝置登入過</div>`
+      : sData.sessions.map((s) => `
+          <div class="admin-row">
+            <div class="info">
+              <div class="line1">${s.device || "未知裝置"} ・ 房號 ${s.room || "—"} ${s.banned ? "🚫已封鎖" : ""}</div>
+              <div class="line2">
+                螢幕 ${s.screen || "—"} ・ 語言 ${s.lang || "—"} ・ 網路 ${s.conn || "未知"}<br>
+                指紋：${shortFp(s.fp)}<br>
+                IP：${s.ip || "—"} ・ 最後使用：${formatTs(s.ts)}
+              </div>
+            </div>
+            ${s.fp ? `<button class="btn-ban" data-fp="${s.fp}">封鎖</button>` : ""}
+          </div>`).join("");
+    sessList.querySelectorAll(".btn-ban").forEach((btn) => {
+      btn.addEventListener("click", () => banDevice(btn.dataset.fp));
+    });
+
+    const bannedList = $("adminBanned");
+    bannedList.innerHTML = sData.banned_fps.length === 0
+      ? `<div class="empty-hint">目前沒有封鎖任何裝置</div>`
+      : sData.banned_fps.map((fp) => `
+          <div class="admin-row">
+            <div class="info"><div class="line2">${shortFp(fp)}</div></div>
+            <button class="btn-unban" data-fp="${fp}">解封</button>
+          </div>`).join("");
+    bannedList.querySelectorAll(".btn-unban").forEach((btn) => {
+      btn.addEventListener("click", () => unbanDevice(btn.dataset.fp));
+    });
+
+    const aData = await api("api/admin/actions");
+    const actionsList = $("adminActions");
+    actionsList.innerHTML = aData.actions.length === 0
+      ? `<div class="empty-hint">還沒有任何操作紀錄</div>`
+      : aData.actions.map((a) => `
+          <div class="admin-row">
+            <div class="info">
+              <div class="line1">${formatTs(a.ts)} － ${a.action}${a.detail ? " (" + a.detail + ")" : ""}</div>
+              <div class="line2">房號 ${a.room || "—"} ・ 指紋 ${shortFp(a.fp)}</div>
+            </div>
+          </div>`).join("");
+  } catch (e) {
+    // 管理員 session 失效（例如重啟服務），退回一般畫面
+    $("adminPanel").classList.remove("active");
+    checkSession();
+  }
+}
+
+async function checkSession() {
+  const data = await api("api/session").catch(() => ({ logged_in: false }));
+  if (data.logged_in) {
+    showApp();
+    pollNow();
+    pollRoomStatus();
+  } else {
+    showLogin();
+  }
+}
+
+/* ---------- 搜尋 / 排行榜：各自獨立的結果清單狀態（捲到底自動載入下一批） ---------- */
+function makeListController(prefix) {
+  const msgEl = $(`${prefix}Msg`);
+  const listEl = $(`${prefix}List`);
+  const loadingEl = $(`${prefix}LoadingMore`);
+  const sentinel = $(`${prefix}Sentinel`);
+  let results = [];
+  let rendered = 0;
+  let abort = null;
+  let seq = 0;
+
+  function renderMore() {
+    const batch = results.slice(rendered, rendered + PAGE_SIZE);
+    listEl.insertAdjacentHTML("beforeend", batch.map(renderCard).join(""));
+    listEl.querySelectorAll("[data-action]:not([data-bound])").forEach((btn) => {
+      btn.setAttribute("data-bound", "1");
+      btn.addEventListener("click", () => orderSong(btn.dataset.id, btn.dataset.action, msgEl));
+    });
+    rendered += batch.length;
+    loadingEl.classList.toggle("show", rendered < results.length);
+  }
+
+  // 捲到清單底部（sentinel 進入可視範圍前 400px）就自動載入下一批，不用手動按按鈕
+  new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && rendered < results.length) renderMore();
+  }, { rootMargin: "400px" }).observe(sentinel);
+
+  async function run(path, body) {
+    const mySeq = ++seq;
+    hideMsg(msgEl);
+    listEl.innerHTML = "";
+    results = [];
+    rendered = 0;
+    loadingEl.classList.remove("show");
+
+    if (abort) abort.abort();
+    abort = new AbortController();
+    listEl.classList.add("searching");
+
+    try {
+      const data = await api(path, { method: "POST", body, signal: abort.signal });
+      if (mySeq !== seq) return; // 已經有更新的查詢蓋過去了，這筆結果直接丟棄
+      if (!data.ok || !data.items || data.items.length === 0) {
+        showMsg(msgEl, data.msg || "查無資料", false);
+        return;
+      }
+      results = data.items;
+      renderMore();
+    } catch (e) {
+      if (e.name === "AbortError" || mySeq !== seq) return;
+      showMsg(msgEl, e.message, true);
+    } finally {
+      if (mySeq === seq) listEl.classList.remove("searching");
+    }
+  }
+
+  return { run };
+}
+
+const searchCtl = makeListController("search");
+const chartCtl = makeListController("chart");
+
+function doSearch() {
+  const word = $("wordInput").value.trim();
+  if (!word) { showMsg($("searchMsg"), "請輸入搜尋關鍵字", true); return; }
+  searchCtl.run("api/search", { word });
+}
+const debouncedSearch = debounce(doSearch, 300);
+$("searchBtn").addEventListener("click", doSearch);
+$("wordInput").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+$("wordInput").addEventListener("input", debouncedSearch);
+
+const CHART_LANS = {
+  N: [["1", "國語"], ["2", "台語"], ["3", "粵語"], ["4", "英語"], ["5", "日語"], ["7", "韓語"], ["8", "越南"]],
+  T: [["1", "國語"], ["2", "台語"]],
+  O: [["1", "國語"], ["2", "台語"], ["3", "粵語"], ["4", "英語"], ["5", "日語"], ["7", "韓語"], ["8", "越南"]],
+};
+function refreshChartLanOptions() {
+  const type = $("chartType").value;
+  $("chartLan").innerHTML = CHART_LANS[type].map(([v, label]) => `<option value="${v}">${label}</option>`).join("");
+}
+$("chartType").addEventListener("change", refreshChartLanOptions);
+refreshChartLanOptions();
+
+$("chartBtn").addEventListener("click", () => {
+  chartCtl.run("api/songlist", { type: $("chartType").value, lan: $("chartLan").value });
+});
+
+function renderCard(item) {
+  const img = item.icon_url || "";
+  return `
+    <div class="song-card">
+      <img src="${img}" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div class="song-meta">
+        <div class="name">${item.song_name}</div>
+        <div class="singer">${item.singer_name}</div>
+        <div class="id">#${item.song_id}</div>
+      </div>
+      <div class="song-actions">
+        <button class="btn-order" data-action="order" data-id="${item.song_id}">點歌</button>
+        <button class="btn-quick" data-action="quick" data-id="${item.song_id}">插播</button>
+        <button class="btn-book" data-action="songbook" data-id="${item.song_id}">加入歌本</button>
+      </div>
+    </div>`;
+}
+
+async function orderSong(songId, action, msgEl) {
+  try {
+    const data = await api("api/order", { method: "POST", body: { song_id: songId, action } });
+    showMsg(msgEl, data.msg || (data.ok ? "操作成功" : "操作失敗"), !data.ok);
+  } catch (e) {
+    showMsg(msgEl, e.message, true);
+  }
+}
+
+/* ---------- 遙控器 ---------- */
+const MIXER_CHANNELS = [
+  { key: "music", name: "音樂", reset: false },
+  { key: "mic", name: "麥克風", reset: false },
+  { key: "tone", name: "音調", reset: true },
+  { key: "echo", name: "迴音", reset: true },
+];
+
+function renderMixer() {
+  $("mixerRows").innerHTML = MIXER_CHANNELS.map((ch) => `
+    <div class="channel-row">
+      <div class="cname">${ch.name}</div>
+      <div class="steps">
+        <button class="step-btn" data-act="${ch.key}_down">－</button>
+        ${ch.reset ? `<button class="reset-btn" data-act="${ch.key}_std">標準</button>` : ""}
+        <button class="step-btn" data-act="${ch.key}_up">＋</button>
+      </div>
+    </div>`).join("");
+}
+renderMixer();
+
+async function sendRemoteAction(btn, act) {
+  const msgEl = $("remoteMsg");
+  const allBtns = document.querySelectorAll("#remotePage button[data-act]");
+  allBtns.forEach((b) => (b.disabled = true));
+  try {
+    const data = await api("api/remote", { method: "POST", body: { act } });
+    if (data.msg) showMsg(msgEl, data.msg, !data.ok);
+    else hideMsg(msgEl);
+  } catch (e) {
+    showMsg(msgEl, e.message, true);
+  } finally {
+    allBtns.forEach((b) => (b.disabled = false));
+  }
+}
+$("remotePage").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-act]");
+  if (btn) sendRemoteAction(btn, btn.dataset.act);
+});
+
+async function pollRoomStatus() {
+  try {
+    const data = await api("api/room-status");
+    if (!data.occupied) {
+      alert(data.msg || "包廂已結束使用，請重新輸入驗證碼");
+      await api("api/logout", { method: "POST" }).catch(() => {});
+      showLogin();
+      return; // 已經登出了，不用再排程下一次檢查
+    }
+  } catch (e) {
+    // 單次檢查失敗（例如網路暫時不通）不代表房間真的結束，忽略繼續排程
+  }
+  setTimeout(pollRoomStatus, 120000);
+}
+
+async function pollNow() {
+  try {
+    const data = await api("api/now");
+    const text = data.singer ? `目前歌手：${data.singer}` : "尚無播放中的歌曲";
+    $("nowPlaying").textContent = data.singer ? `目前歌手：${data.singer}` : "";
+    $("homeSinger").textContent = text;
+  } catch (e) {
+    // 忽略單次失敗
+  }
+  setTimeout(pollNow, 20000);
+}
+
+checkSession();
+</script>
+</body>
+</html>

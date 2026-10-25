@@ -1,0 +1,19 @@
+services:
+  holidaysong:
+    build: .
+    image: holidaysong:latest
+    container_name: holidaysong
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - TZ=Asia/Taipei
+    volumes:
+      - ./data:/app/data
+    labels:
+      - "autoheal=true"
+    networks:
+      - proxy_network
+
+networks:
+  proxy_network:
+    external: true
